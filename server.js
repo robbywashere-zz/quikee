@@ -3,12 +3,13 @@ const logger = require('./lib/logger');
 const config = require('config');
 const dbSync = require('./db/sync');
 const cookieSession = require('cookie-session');
-const { User } = require('./models'); 
+const { User, Account } = require('./models'); 
+const { Unauthorized } = require('http-errors'); 
 
 function ProtectWithAuth(req,res,next) {
   try {
     if (req.session.userId) next();
-    else throw new Error('NOT AUTHED!')
+    else throw new Unauthorized();
   } catch(e) {
     next(e);
   }
@@ -16,7 +17,6 @@ function ProtectWithAuth(req,res,next) {
 
 async function Server(){
   await dbSync(true);
-  const PORT = config.get('PORT');
   const app = express();
   app.use(require('body-parser').json());
   app.use(cookieSession({
@@ -40,11 +40,19 @@ async function Server(){
     } catch(e) {
       next(e);
     } 
+
   });
+
 
   app.post('/user',async (req,res, next)=>{
     try {
       let user = await User.create(req.body);
+      await user.reload({
+        include: [{
+          model: Account,
+          through: { attributes: [] }        
+        }]
+      })
       res.send(user);
     } catch(e) {
       next(e);
@@ -54,6 +62,19 @@ async function Server(){
 
   //--AUTH ROUTES
   app.use(ProtectWithAuth)
+  //
+
+  app.get('/accounts', async(req,res,next) => {
+    try {
+      let accounts = await Account.findAll({ 
+        where: { '$Users.UserAccount.UserId$': req.session.userId },
+        include: [ { model: User, through: { attributes: [] } }]
+      });
+      res.send(accounts);
+    } catch(e) {
+      next(e);
+    } 
+  });
 
   app.get('/users', async(req,res,next) => {
     try {
@@ -65,12 +86,31 @@ async function Server(){
   });
 
   app.get('/', (req,res)=>res.send('Hello World'))
-  app.listen(PORT, function(){
-    logger.log(`Listening on ${PORT}`);
-  });
+
+  app.use((err, req, res, next) => {
+    if (config.get('NODE_ENV') !== 'production') logger.error(err);
+    if (res.headersSent) {
+      return next(err)
+    }
+    const status = err.status || 500;
+    res.status(status);
+    res.send({ error: { message: err.message, status  }})
+  })
+
 
   return app;
 }
 
-if (require.main === module) Server();
+if (require.main === module) {
+  (async ()=>{
+    try { 
+      const PORT = config.get('PORT');
+      const app = await Server();
+      app.listen(PORT, ()=> logger.log(`Listening on ${PORT}`))
+    } catch(e) {
+      logger.error(`Could not start server \n ${e}`);
+    }
+  })()
+}
+
 module.exports = Server

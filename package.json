@@ -12,14 +12,23 @@
     "dotenv": "^6.0.0",
     "express": "^4.16.3",
     "express-session": "^1.15.6",
+    "haikunator": "^2.0.0",
+    "http-errors": "^1.6.3",
     "lodash": "^4.17.10",
     "passport": "^0.4.0",
     "passport-local": "^1.0.0",
     "pg": "^7.4.3",
     "sequelize": "4"
   },
+  "scripts": {
+    "db:up": "echo \"CREATE DATABASE $(jq '.development.database' ./db/dbparams.json); CREATE DATABASE $(jq '.test.database' ./db/dbparams.json);\"  | psql --u postgres",
+    "db:down": "echo \"DROP DATABASE $(jq '.development.database' ./db/dbparams.json); DROP DATABASE $(jq '.test.database' ./db/dbparams.json);\"  | psql --u postgres",
+    "test": "mocha ./test/**/*.test.js"
+  },
   "devDependencies": {
     "eslint": "^4.19.1",
-    "eslint-config-airbnb": "^16.1.0"
+    "eslint-config-airbnb": "^16.1.0",
+    "mocha": "^5.2.0",
+    "sinon": "^6.1.4"
   }
 }
