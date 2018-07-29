@@ -21,8 +21,7 @@
     "sequelize": "4"
   },
   "scripts": {
-    "db:up": "echo \"CREATE DATABASE $(jq '.development.database' ./db/dbparams.json); CREATE DATABASE $(jq '.test.database' ./db/dbparams.json);\"  | psql --u postgres",
-    "db:down": "echo \"DROP DATABASE $(jq '.development.database' ./db/dbparams.json); DROP DATABASE $(jq '.test.database' ./db/dbparams.json);\"  | psql --u postgres",
+    "db:bootstrap":"node ./scripts/bootstrapDB.js",
     "test": "mocha ./test/**/*.test.js"
   },
   "devDependencies": {
